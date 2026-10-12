@@ -1,0 +1,16 @@
+# Ejecutables y objetos
+*.exe
+*.o
+*.obj
+*.out
+
+# Depuración
+*.pdb
+*.ilk
+
+# IDE (deja solo el tuyo)
+.vscode/
+.vs/
+Debug/
+Release/
+x64/
