@@ -34,18 +34,31 @@ public:
     Nodo* clonar() const;
 };
 
-class Funcion{
+class Tokenizador{
 private:
     std::string expresion;
+    std::vector<Token> tokens;
+public:
+    std::vector<Token> getTokens();
+
+    std::string leerNumero(const std::vector<Token>& tokens, const std::string& expresion, size_t& i);
+    bool terminaValor(const std::vector<Token>& tokens);
+    void multImpl(std::vector<Token>& tokens);
+    void validarSintaxis(const std::vector<Token>& tokens);
+    void validarParentesis(const std::vector<Token>& tokens);
+    std::vector<Token> tokenizar(std::string);
+};
+
+class Funcion{
+private:
     Nodo* raiz;
 public:
-    Funcion() : expresion(""), raiz(nullptr) {} 
+    Funcion() : raiz(nullptr) {} 
     ~Funcion();
 
     Funcion(const Funcion&) = delete; // prohibe crear una Funcion copiando otra
     Funcion& operator=(const Funcion&) = delete; // prohibe asignar una Funcion a otra
 
-    std::vector<Token> tokenizar(std::string);
 };
 
 #endif

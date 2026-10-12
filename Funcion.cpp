@@ -21,92 +21,201 @@ Nodo* Nodo::clonar() const {
 }
 
 Funcion::~Funcion(){ delete raiz; }
-std::vector<Token> Funcion::tokenizar(std::string funcion){
+
+std::string Tokenizador::leerNumero(const std::vector<Token>& tokens, const std::string& expresion, size_t& i){
+    std::string token;
+    int punto=0;
+    while (isdigit(expresion[i]) || expresion[i] == '.') { 
+        token.push_back(expresion[i]); i++; 
+        if (expresion[i] == '.') punto++;
+    } i--;
+    
+    if ((punto != 0 && punto!=1) || token.front() == '.' || token.front() == '.' || terminaValor(tokens)){
+        throw std::invalid_argument("Sintaxis no valida");
+    } // fi
+    
+    return token;
+}
+bool Tokenizador::terminaValor(const std::vector<Token> &tokens){
+    if (tokens.empty()) return false;
+    return (tokens.back().tipo == TipoToken::NUMERO || tokens.back().tipo == TipoToken::VARIABLE || tokens.back().valor == ")" );
+}
+void Tokenizador::multImpl(std::vector<Token> &tokens){
+    if (!tokens.empty() && terminaValor(tokens))
+        tokens.push_back(Token{TipoToken::OPERADOR, "*"});
+}
+void Tokenizador::validarSintaxis(const std::vector<Token>& tokens){
+    if (tokens.back().tipo == TipoToken::OPERADOR || (tokens.front().tipo == TipoToken::OPERADOR && tokens.front().valor != "neg"))
+        throw std::invalid_argument("Sintaxis no valida: posicion invalida del operador binario");
+}
+void Tokenizador::validarParentesis(const std::vector<Token>& tokens){
+    int abiertos = 0;
+
+    for (const Token& t : tokens){
+        if (t.tipo == TipoToken::PARENTESIS){
+            if (t.valor == "("){
+                abiertos++;
+            } else if (t.valor == ")"){
+                abiertos--;
+
+                if (abiertos < 0)
+                    throw std::invalid_argument("Sintaxis no valida: parentesis no validos");
+            }
+        }
+    }
+
+    if (abiertos != 0)
+        throw std::invalid_argument("Sintaxis no valida: parentesis no validos");
+}
+std::vector<Token> Tokenizador::tokenizar(std::string funcion){
     std::vector<Token> tokens;
     std::string token;
     
-    for (int i=0; i<funcion.size(); i++){
+    for (size_t i=0; i<funcion.size(); i++){
         // NÚMERO
         if (isdigit(funcion[i]) || funcion[i] == '.'){
-            while (isdigit(funcion[i]) || funcion[i] == '.') { token.push_back(funcion[i]); i++; }
-            i--; tokens.push_back(Token{TipoToken::NUMERO, token}); token.clear();
+            tokens.push_back(Token{TipoToken::NUMERO, leerNumero(tokens, funcion, i)}); token.clear();
         
-        // FUNCIONES (sin, cos, ln)
+        // FUNCIONES (sin, cos)
         } else if (funcion.substr(i, 3) == "sin" || funcion.substr(i, 3) == "cos"){
+            multImpl(tokens);
             tokens.push_back(Token{TipoToken::FUNCION, funcion.substr(i, 3)}); i+=2;
-        } else if (funcion.substr(i, 2) == "ln"){
-            tokens.push_back(Token{TipoToken::FUNCION, "ln"}); i++;
         
         // VARIABLE
         } else if (funcion[i] == 'x'){
+            multImpl(tokens);
             tokens.push_back(Token{TipoToken::VARIABLE, std::string(1,funcion[i])});
         
         // OPERADORES
         } else if (funcion[i] == '+' || funcion[i] == '*' || funcion[i] == '/' || funcion[i] == '^'){
+            if(!tokens.empty()) if (tokens.back().tipo == TipoToken::OPERADOR) throw std::invalid_argument("Sintaxis no valida: operadores consecutivos");
             tokens.push_back(Token{TipoToken::OPERADOR, std::string(1,funcion[i])});
         // Menos (unario)
         } else if (funcion[i] == '-'){
-            if (!tokens.empty()){
-                if (tokens.back().tipo == TipoToken::NUMERO || tokens.back().tipo == TipoToken::VARIABLE || tokens.back().valor == ")" ){
-                    tokens.push_back(Token{TipoToken::OPERADOR, "-"});
-                } else tokens.push_back(Token{TipoToken::OPERADOR, "neg"});
+            if(!tokens.empty()) if (tokens.back().tipo == TipoToken::OPERADOR) throw std::invalid_argument("Sintaxis no valida: operadores consecutivos");
+            if (terminaValor(tokens)){ tokens.push_back(Token{TipoToken::OPERADOR, "-"});
             } else tokens.push_back(Token{TipoToken::OPERADOR, "neg"});
 
         // PARENTESIS
-        } else if (funcion[i] == '(' || funcion[i] == ')'){
+        } else if (funcion[i] == '('){
+            multImpl(tokens);
             tokens.push_back(Token{TipoToken::PARENTESIS, std::string(1,funcion[i])});
-        
+        } else if (funcion[i] == ')'){
+            if (!tokens.empty()) if (tokens.back().valor == "(") throw std::invalid_argument("Sintaxis no valida: parentesis vacios");
+            tokens.push_back(Token{TipoToken::PARENTESIS, std::string(1,funcion[i])});
+
         // SÍMBOLOS INVALIDOS
         } else if (funcion[i] != ' ') throw std::invalid_argument("Argumento no valido");
     }
 
+    validarParentesis(tokens);
+    validarSintaxis(tokens);
     return tokens;
 }
 
+// El enum class no se imprime solo: esta función da un nombre a cada tipo
+std::string nombreTipo(TipoToken t){
+    switch (t){
+        case TipoToken::NUMERO:     return "NUM";
+        case TipoToken::VARIABLE:   return "VAR";
+        case TipoToken::OPERADOR:   return "OP";
+        case TipoToken::PARENTESIS: return "PAR";
+        case TipoToken::FUNCION:    return "FUN";
+    }
+    return "?";
+}
+
+// Une los valores con espacios: "2 * x + 1"
+std::string aTexto(const std::vector<Token>& tokens){
+    std::string s;
+    for (size_t i = 0; i < tokens.size(); i++){
+        if (i > 0) s += " ";
+        s += tokens[i].valor;
+    }
+    return s;
+}
+
+// Imprime cada token como valor:TIPO
+void imprimir(const std::vector<Token>& tokens){
+    for (const Token& t : tokens)
+        std::cout << t.valor << ":" << nombreTipo(t.tipo) << "  ";
+    std::cout << std::endl;
+}
+
+struct Caso {
+    std::string entrada;
+    std::string esperado;   // "ERROR" si debe lanzar excepción
+};
+
 int main(){
-    Funcion f1;
+    Tokenizador t;
 
-    // FUNCIONES BÁSICAS 
+    std::vector<Caso> casos = {
+        // Básicos
+        {"2*x+1",           "2 * x + 1"},
+        {"12.5 * (x - 3)",  "12.5 * ( x - 3 )"},
+        {"x^2",             "x ^ 2"},
+        {"2^x",             "2 ^ x"},
+        {"x+1",             "x + 1"},
 
-    std::vector<Token> t1 = f1.tokenizar("2*x+1");
-    std::vector<Token> t2 = f1.tokenizar("12.5 * (x - 3)");
-    
-    for (auto& s : t1) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-    for (auto& s : t2) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-    
-    try {
-        std::vector<Token> t3 = f1.tokenizar("3 $ x");
-        for (auto& s : t3) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
+        // Funciones
+        {"sin(x)",          "sin ( x )"},
+        {"cos(x+1)",         "cos ( x + 1 )"},
+
+        // Menos unario
+        {"-x",              "neg x"},
+        {"3-x",             "3 - x"},
+        {"3 - x",           "3 - x"},
+        {"-x^2",            "neg x ^ 2"},
+        {"(-x)",            "( neg x )"},
+        {"-sin(x)",         "neg sin ( x )"},
+        
+        // Multiplicación implícita
+        {"2x",              "2 * x"},
+        {"2x^2",            "2 * x ^ 2"},
+        {"3sin(x)",         "3 * sin ( x )"},
+        {"xcos(x)",         "x * cos ( x )"},
+        {"2(x+1)",          "2 * ( x + 1 )"},
+        {"x(x-1)",          "x * ( x - 1 )"},
+        {"(x+1)(x-1)",      "( x + 1 ) * ( x - 1 )"},
+        {"-2x",             "neg 2 * x"},
+        
+        // Deben fallar
+        {"2*-x",            "ERROR"},
+        {"x--x",            "ERROR"},
+        {"3 $ x",           "ERROR"},
+        {"tan(x)",          "ERROR"},
+        {"2 3",             "ERROR"},
+        {"x2",              "ERROR"},
+        {"x()2",            "ERROR"},
+        {"(x)2",            "ERROR"}
+    };
+
+    int fallas = 0;
+    for (const Caso& c : casos){
+        std::cout << "Entrada: \"" << c.entrada << "\"" << std::endl;
+        std::string obtenido;
+
+        try {
+            std::vector<Token> tokens = t.tokenizar(c.entrada);
+            obtenido = aTexto(tokens);
+            std::cout << "  ";
+            imprimir(tokens);
+        }
+        catch (const std::exception& e){
+            obtenido = "ERROR";
+            std::cout << "  Error: " << e.what() << std::endl;
+        }
+
+        if (obtenido == c.esperado) {
+            std::cout << "  OK" << std::endl;
+        } else {
+            std::cout << "  FALLA (esperado: " << c.esperado
+                      << " | obtenido: " << obtenido << ")" << std::endl;
+            fallas++;
+        }
     }
-    catch (const std::exception& e){
-        std::cout << "Error: " << e.what() << std::endl;
-    }
-    
-    std::vector<Token> t4 = f1.tokenizar("2 3");
-    std::vector<Token> t5 = f1.tokenizar("x^2");
-    
-    for (auto& s : t4) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-    for (auto& s : t5) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
 
-    // MENOS UNARIO
-
-    std::vector<Token> t6 = f1.tokenizar("-x");
-    std::vector<Token> t7 = f1.tokenizar("3-x");
-    std::vector<Token> t8 = f1.tokenizar("3 - x");
-    std::vector<Token> t9 = f1.tokenizar("-x^2");
-    std::vector<Token> t10 = f1.tokenizar("2*-x");
-    std::vector<Token> t11 = f1.tokenizar("(-x)");
-    std::vector<Token> t12 = f1.tokenizar("x--x");
-    std::vector<Token> t13 = f1.tokenizar("-sin(x)");
-
-    for (auto& s : t6) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-    for (auto& s : t7) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-    for (auto& s : t8) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-    for (auto& s : t9) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-    for (auto& s : t10) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-    for (auto& s : t11) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-    for (auto& s : t12) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-    for (auto& s : t13) std::cout << "\"" << s.valor << "\"  "; std::cout << std::endl;
-
+    std::cout << "\nFallas: " << fallas << " de " << casos.size() << std::endl;
     return 0;
 }
