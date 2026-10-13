@@ -3,6 +3,8 @@
 
 #include <string>
 #include <vector>
+#include <stack>
+#include <stdexcept>
 
 enum class TipoToken {
     NUMERO, VARIABLE, OPERADOR, PARENTESIS, FUNCION
@@ -15,7 +17,7 @@ struct Token{
 
 class Nodo{
 private:
-    Token dato; // Operador, número, variable o función
+    Token dato; 
     Nodo *izq, *der;
 public:
     Nodo(Token t) : dato(t), izq(nullptr), der(nullptr) {} 
@@ -35,23 +37,30 @@ public:
 };
 
 class Tokenizador{
-private:
-    std::string expresion;
-    std::vector<Token> tokens;
-public:
-    std::vector<Token> getTokens();
 
-    std::string leerNumero(const std::vector<Token>& tokens, const std::string& expresion, size_t& i);
+private:
+    // std::string expresion;
+    // std::vector<Token> tokens;
     bool terminaValor(const std::vector<Token>& tokens);
     void multImpl(std::vector<Token>& tokens);
+    std::string leerNumero(const std::vector<Token>& tokens, const std::string& expresion, size_t& i);
+
     void validarSintaxis(const std::vector<Token>& tokens);
     void validarParentesis(const std::vector<Token>& tokens);
+
+public:
+    // std::vector<Token> getTokens();
     std::vector<Token> tokenizar(std::string);
 };
 
 class Funcion{
 private:
     Nodo* raiz;
+    
+    int prioridad(const Token &t);
+    bool asociativoDerecha(const Token &t);
+    
+    std::vector<Token> transfPosfija(const std::vector<Token> &tokens);
 public:
     Funcion() : raiz(nullptr) {} 
     ~Funcion();
@@ -59,6 +68,7 @@ public:
     Funcion(const Funcion&) = delete; // prohibe crear una Funcion copiando otra
     Funcion& operator=(const Funcion&) = delete; // prohibe asignar una Funcion a otra
 
+    void construirArbol(const std::vector<Token> &tokens);
 };
 
 #endif
