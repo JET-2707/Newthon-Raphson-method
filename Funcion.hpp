@@ -1,5 +1,5 @@
-#ifndef FUNCION_H
-#define FUNCION_H
+#ifndef FUNCION_HPP
+#define FUNCION_HPP
 
 #include "Estructuras.hpp"
 #include "Arbol_Expresiones.hpp"
@@ -25,11 +25,13 @@ class Funcion{
 private:
     ArbolExpresiones expresion, derivada;
 public:
-    // Funcion(ArbolExpresiones ex, ArbolExpresiones dv) : expresion(ex), derivada(dv) {}
-    ~Funcion();
+    explicit Funcion(const std::string& fun);
 
     Funcion(const Funcion&) = delete; // prohibe crear una Funcion copiando otra
     Funcion& operator=(const Funcion&) = delete; // prohibe asignar una Funcion a otra
+
+    double evaluar(double x) const;
+    double evaluarDerivada(double x) const;
 };
 
 #endif

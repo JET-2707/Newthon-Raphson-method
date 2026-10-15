@@ -6,6 +6,26 @@
 #include <memory>
 #include <cmath>
 
+Nodo::~Nodo(){ delete izq; delete der; }
+
+Token Nodo::getDato() const { return dato; }
+Nodo* Nodo::getIzq() const { return izq; }
+Nodo* Nodo::getDer() const { return der; }
+
+void Nodo::setIzq(Nodo* iz) { this->izq = iz; }
+void Nodo::setDer(Nodo* dr) { this->der = dr; }
+
+Nodo* Nodo::clonar() const {
+    auto copia = std::make_unique<Nodo>(dato);
+
+    if (izq != nullptr) copia->setIzq(izq->clonar());
+    if (der != nullptr) copia->setDer(der->clonar());
+
+    return copia.release();
+}
+
+const Nodo* ArbolExpresiones::getRaiz() const { return raiz; } 
+
 int ArbolExpresiones::prioridad(const Token& t){
     if (t.valor == "^") return 4;
     if (t.valor == "neg") return 3;
@@ -107,11 +127,24 @@ void ArbolExpresiones::construirArbol(const std::vector<Token>& tokens) {
             if (pila.size() < 2) 
                 throw std::invalid_argument("Faltan operandos para un operador binario");
 
-            if (t.valor == "^" && (pila.back().get()->getDato().tipo != TipoToken::NUMERO || 
-            (pila.back().get()->getDato().valor != "/" && 
-            pila.back().get()->getDer()->getDato().tipo != TipoToken::NUMERO && 
-            pila.back().get()->getIzq()->getDato().tipo != TipoToken::NUMERO)))
-                throw std::invalid_argument("El exponente debe ser un numero positivo o una division (a/b)");
+            // El operando superior de la pila es el exponente.
+            if (t.valor == "^") {
+                const Nodo* exponente = pila.back().get();
+                const Token dato = exponente->getDato();
+
+                bool valido = false;
+
+                if (dato.tipo == TipoToken::NUMERO) valido = true;
+                else if (dato.tipo == TipoToken::OPERADOR && dato.valor == "/") {
+                    const Nodo* numerador = exponente->getIzq();
+                    const Nodo* denominador = exponente->getDer();
+                    valido = numerador != nullptr && denominador != nullptr && 
+                        numerador->getDato().tipo == TipoToken::NUMERO && denominador->getDato().tipo == TipoToken::NUMERO;
+                } // if
+
+                if (!valido)
+                    throw std::invalid_argument("El exponente debe ser un numero o una division entre numeros");
+            } // if
 
             auto n = std::make_unique<Nodo>(t);
 
@@ -165,7 +198,15 @@ double ArbolExpresiones::evaluarNodo(Nodo* n, double x) const {
 
 double ArbolExpresiones::evaluar(double x) const {
     if (raiz == nullptr) throw std::invalid_argument("Expresion vacia");
-    if (std::isfinite(evaluarNodo(raiz, x))) 
-        return evaluarNodo(raiz, x);
-    throw std::domain_error("Desbordamiento");
+    double resultado = evaluarNodo(raiz, x);
+    if (std::isfinite(resultado)) 
+        return resultado;
+    throw std::domain_error("Resultado no definido (NaN o infinito)");
+}
+
+void ArbolExpresiones::adoptar(Nodo* nueva){
+    if (nueva == nullptr || nueva == raiz) return;
+    
+    delete raiz;
+    raiz = nueva;
 }

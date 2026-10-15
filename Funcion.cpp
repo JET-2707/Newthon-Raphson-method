@@ -1,28 +1,11 @@
 #include "Funcion.hpp"
 #include "Arbol_Expresiones.hpp"
+#include "Derivada.hpp"
 
 #include <algorithm>
 #include <cctype>
 #include <stdexcept>
 #include <memory>
-
-Nodo::~Nodo(){ delete izq; delete der; }
-
-Token Nodo::getDato() const { return dato; }
-Nodo* Nodo::getIzq() const { return izq; }
-Nodo* Nodo::getDer() const { return der; }
-
-void Nodo::setIzq(Nodo* iz) { this->izq = iz; }
-void Nodo::setDer(Nodo* dr) { this->der = dr; }
-
-Nodo* Nodo::clonar() const {
-    auto copia = std::make_unique<Nodo>(dato);
-
-    if (izq != nullptr) copia->setIzq(izq->clonar());
-    if (der != nullptr) copia->setDer(der->clonar());
-
-    return copia.release();
-}
 
 std::string Tokenizador::leerNumero(const std::vector<Token>& tokens, const std::string& expresion, size_t& i) {
     std::string token;
@@ -51,7 +34,7 @@ void Tokenizador::multImpl(std::vector<Token> &tokens){
 }
 void Tokenizador::validarSintaxis(const std::vector<Token>& tokens){
     if (!tokens.empty()){
-        for (int i=0; i<tokens.size(); i++){
+        for (size_t i=0; i<tokens.size(); i++){
             if (tokens[i].valor == "/"){
                 if (i<2 || tokens[i-2].valor != "(" || tokens[i-1].tipo != TipoToken::NUMERO || tokens[i+1].tipo != TipoToken::NUMERO || tokens[i+2].valor != ")")
                     throw std::invalid_argument("Sintaxis no valida: la division solo se permite como fraccion numerica (a/b)");
@@ -132,17 +115,30 @@ std::vector<Token> Tokenizador::tokenizar(std::string funcion){
     return tokens;
 }
 
-// Funcion::~Funcion(){ delete arbol; }
+Funcion::Funcion(const std::string& f){
+    Tokenizador t;
+    Derivador d;
+
+    expresion.construirArbol(t.tokenizar(f));
+    derivada.adoptar(d.derivar(expresion));
+}
+double Funcion::evaluar(double x) const { return expresion.evaluar(x); }
+double Funcion::evaluarDerivada(double x) const { return derivada.evaluar(x); }
+
 
 #include <iostream>
 
 int main(){
     Tokenizador t;
-    std::vector<Token> funcion = t.tokenizar("sin(x)^2+cos(x)^2");
-    ArbolExpresiones a;
+    std::vector<Token> funcion = t.tokenizar("x^(3/2)");
+    ArbolExpresiones a, d;
+    Derivador der;
 
     a.construirArbol(funcion);
-    std::cout << a.evaluar(1.3) << std::endl;
+    std::cout << "Funcion: " << a.evaluar(4) << std::endl;
+
+    d.adoptar(der.derivar(a));
+    std::cout << "Derivada: " << d.evaluar(4) << std::endl;
 
     return 0;
 }

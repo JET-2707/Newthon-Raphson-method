@@ -1,5 +1,5 @@
-#ifndef ESTRUCTURAS_H
-#define ESTRUCTURAS_H
+#ifndef ESTRUCTURAS_HPP
+#define ESTRUCTURAS_HPP
 
 #include <string>
 

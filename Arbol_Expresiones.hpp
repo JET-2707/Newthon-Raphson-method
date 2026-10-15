@@ -1,5 +1,5 @@
-#ifndef ARBOL_EXPRESIONES_H
-#define ARBOL_EXPRESIONES_H
+#ifndef ARBOL_EXPRESIONES_HPP
+#define ARBOL_EXPRESIONES_HPP
 
 #include "Estructuras.hpp"
 
@@ -41,9 +41,13 @@ public:
     
     ArbolExpresiones(const ArbolExpresiones&) = delete;
     ArbolExpresiones& operator=(const ArbolExpresiones&) = delete;
+    
+    const Nodo* getRaiz() const;
 
     void construirArbol(const std::vector<Token> &tokens);
     double evaluar(double x) const;
+
+    void adoptar(Nodo* nueva);
 };
 
 #endif
