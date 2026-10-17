@@ -94,7 +94,6 @@ std::vector<Token> Tokenizador::tokenizar(std::string funcion){
             tokens.push_back(Token{TipoToken::OPERADOR, std::string(1,funcion[i])});
         // Menos (unario)
         } else if (funcion[i] == '-'){
-            // if(!tokens.empty()) if (tokens.back().tipo == TipoToken::OPERADOR) throw std::invalid_argument("Sintaxis no valida: operadores consecutivos");
             if (terminaValor(tokens)){ tokens.push_back(Token{TipoToken::OPERADOR, "-"});
             } else tokens.push_back(Token{TipoToken::OPERADOR, "neg"});
 
@@ -119,26 +118,10 @@ Funcion::Funcion(const std::string& f){
     Tokenizador t;
     Derivador d;
 
-    expresion.construirArbol(t.tokenizar(f));
+    this->funcion = f;
+    expresion.construirArbol(t.tokenizar(funcion));
     derivada.adoptar(d.derivar(expresion));
 }
+std::string Funcion::getFuncion() { return funcion; }
 double Funcion::evaluar(double x) const { return expresion.evaluar(x); }
 double Funcion::evaluarDerivada(double x) const { return derivada.evaluar(x); }
-
-
-#include <iostream>
-
-int main(){
-    Tokenizador t;
-    std::vector<Token> funcion = t.tokenizar("x^(3/2)");
-    ArbolExpresiones a, d;
-    Derivador der;
-
-    a.construirArbol(funcion);
-    std::cout << "Funcion: " << a.evaluar(4) << std::endl;
-
-    d.adoptar(der.derivar(a));
-    std::cout << "Derivada: " << d.evaluar(4) << std::endl;
-
-    return 0;
-}

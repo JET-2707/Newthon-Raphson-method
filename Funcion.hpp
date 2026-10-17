@@ -23,12 +23,15 @@ public:
 
 class Funcion{
 private:
+    std::string funcion;
     ArbolExpresiones expresion, derivada;
 public:
     explicit Funcion(const std::string& fun);
 
     Funcion(const Funcion&) = delete; // prohibe crear una Funcion copiando otra
     Funcion& operator=(const Funcion&) = delete; // prohibe asignar una Funcion a otra
+
+    std::string getFuncion();
 
     double evaluar(double x) const;
     double evaluarDerivada(double x) const;
